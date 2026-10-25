@@ -158,7 +158,12 @@ def build_google_service(
     service_name: str, version: str, credentials: google.auth.credentials.Credentials
 ) -> Resource:
     """Build a discovery client on a pooled, timeout-bounded connection."""
-    return build(service_name, version, http=_build_authorized_http(credentials))
+    from auth.action_policy import policy_enabled, protected_request
+
+    options = {"requestBuilder": protected_request} if policy_enabled() else {}
+    return build(
+        service_name, version, http=_build_authorized_http(credentials), **options
+    )
 
 
 @contextmanager

@@ -180,6 +180,19 @@ class BifrostActionPolicyTests(unittest.TestCase):
         )
         calendar.freebusy().query(body={"items": [{"id": "primary"}]})
 
+    def test_upstream_comment_and_recurrence_actions_keep_policy_limits(self):
+        drive = self.clients["drive"]
+        drive.comments().update(
+            fileId="test", commentId="test", body={"content": "updated"}, fields="id"
+        )
+        with self.assertRaisesRegex(ValueError, "no-delete"):
+            drive.comments().delete(fileId="test", commentId="test")
+        self.clients["calendar"].events().patch(
+            calendarId="primary",
+            eventId="test",
+            body={"recurrence": ["RRULE:FREQ=WEEKLY;UNTIL=20261101T000000Z"]},
+        )
+
     def test_calendar_delete_clear_and_cancel_are_blocked(self):
         calendar = self.clients["calendar"]
         calls = (

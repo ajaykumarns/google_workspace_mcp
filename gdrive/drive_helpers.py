@@ -849,11 +849,14 @@ async def initiate_resumable_upload_session(
     # AuthorizedHttp. Use HttpRequest for the same bounded retry policy as other
     # uploads, keeping the response headers because initiation has an empty body.
     # Retrying only opens another session; no file is written until the client PUT.
-    request = HttpRequest(
+    from auth.action_policy import protected_request
+
+    request = protected_request(
         service._http,
         postproc=lambda response, content: (response, content),
         uri=url,
         method="PATCH" if file_id else "POST",
+        methodId="drive.files.update" if file_id else "drive.files.create",
         body=json.dumps(file_metadata or {}),
         headers={
             "Content-Type": "application/json; charset=UTF-8",

@@ -24,7 +24,7 @@ from weakref import WeakValueDictionary
 
 import httpx
 from googleapiclient.errors import HttpError
-from googleapiclient.http import HttpRequest, MediaIoBaseDownload, MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
 from auth.service_decorator import require_google_service
 from core.file_limits import download_media_bytes

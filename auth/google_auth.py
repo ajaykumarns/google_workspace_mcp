@@ -161,7 +161,9 @@ def build_google_service(
     from auth.action_policy import policy_enabled, protected_request
 
     options = {"requestBuilder": protected_request} if policy_enabled() else {}
-    return build(service_name, version, http=_build_authorized_http(credentials), **options)
+    return build(
+        service_name, version, http=_build_authorized_http(credentials), **options
+    )
 
 
 @contextmanager

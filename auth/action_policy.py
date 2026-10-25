@@ -4,20 +4,23 @@ import json
 import os
 from email.parser import BytesParser
 from email.policy import default
+from urllib.parse import parse_qs, urlsplit
 
 from googleapiclient.http import HttpRequest
 
 
 POLICY_ENV = "WORKSPACE_MCP_ACTION_POLICY"
 POLICY_NAME = "organize-no-delete"
-GMAIL_WRITES = frozenset({
-    "gmail.users.messages.modify",
-    "gmail.users.messages.batchModify",
-    "gmail.users.threads.modify",
-    "gmail.users.labels.create",
-    "gmail.users.labels.update",
-    "gmail.users.labels.patch",
-})
+GMAIL_WRITES = frozenset(
+    {
+        "gmail.users.messages.modify",
+        "gmail.users.messages.batchModify",
+        "gmail.users.threads.modify",
+        "gmail.users.labels.create",
+        "gmail.users.labels.update",
+        "gmail.users.labels.patch",
+    }
+)
 
 
 def policy_enabled():
@@ -35,6 +38,10 @@ def reject_delete(action):
 def _metadata(request):
     body = request.body
     if not body:
+        return {}
+    # A media-only upload changes file bytes and carries no metadata. Its
+    # contents can be arbitrary JSON, including text that resembles metadata.
+    if parse_qs(urlsplit(request.uri).query).get("uploadType") == ["media"]:
         return {}
     content_type = next(
         (v for k, v in request.headers.items() if k.lower() == "content-type"),
@@ -77,13 +84,19 @@ def protected_request(*args, **kwargs):
     method_id = request.methodId or ""
     action = method_id.rsplit(".", 1)[-1].lower()
     if request.method.upper() == "DELETE" or action in {
-        "delete", "batchdelete", "trash", "emptytrash", "clear",
+        "delete",
+        "batchdelete",
+        "trash",
+        "emptytrash",
+        "clear",
     }:
         reject_delete(method_id)
     if request.method.upper() == "GET":
         return request
     if method_id.startswith("gmail.") and method_id not in GMAIL_WRITES:
         raise ValueError("Action blocked by Workspace Gmail organize-only policy")
-    if method_id in GMAIL_WRITES or method_id.startswith(("drive.files.", "calendar.events.")):
+    if method_id in GMAIL_WRITES or method_id.startswith(
+        ("drive.files.", "calendar.events.")
+    ):
         validate_write_metadata(method_id, _metadata(request))
     return request
